@@ -82,10 +82,13 @@ program schism_driver
      stop
   endif
 
+#ifndef USE_PDAF
   call parallel_init
+#else
+  ! Revise parallelization for ensemble assimilation
+  CALL init_parallel_pdaf(0, 1)
+#endif
 
-  !Deal with command args
-  !call get_command_args
   call schism_main
   call parallel_finalize
  
@@ -95,10 +98,28 @@ subroutine schism_main
   use schism_msgp, only: myrank !! debug only
   implicit none
   integer :: it,iths,ntime
+
   call schism_init('./',iths,ntime)
+
+#ifdef USE_PDAF
+  ! Initialize PDAF
+  !call init_pdaf()
+#endif
+
   do it=iths+1,ntime
     call schism_step(it)
+
+#ifdef USE_PDAF
+    !call assimilate_pdaf()
+#endif
   enddo !it
+
   call schism_finalize
+
+#ifdef USE_PDAF
+  ! End parallelization
+  CALL finalize_pdaf()
+#endif
+
 end subroutine schism_main
 

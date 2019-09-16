@@ -87,6 +87,14 @@ else
    GTMLIBS =
 endif
 
+ifdef USE_PDAF
+   PDAFLIBS = -L/sciclone/home10/yinglong/PDAF-D_V1.14/lib -lpdaf-d
+#   PDAFMOD =  -I/sciclone/home10/yinglong/PDAF-D_V1.14/src/
+else
+   PDAFLIBS=
+#   PDAFMOD = 
+endif
+
 
 ######### Specialty compiler flags and workarounds
 # Add -DNO_TR_15581 like below for allocatable array problem in sflux_subs.F90

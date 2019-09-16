@@ -106,7 +106,7 @@ endif
 
 #Search path
 VPATH = Core/ Driver/ Hydro/ EcoSim/ COSINE/ Sediment/ Sed2d/ \
-        WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Fabm/
+        WWMIII/ ICM/ TIMOR/ FIB/ Ice/ Fabm/ PDAF_bindings/
 
 ifdef FUJITSU
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DFUJITSU
@@ -116,6 +116,11 @@ include o/$(config)/autosrc.mk
 
 #Cores
 OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o misc_modules.o schism_io.o schism_driver.o 
+
+ifdef USE_PDAF
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DPDAF
+  OBJS := $(OBJS) mod_parallel_pdaf.o init_parallel_pdaf.o finalize_pdaf.o
+endif
 
 ifdef USE_PETSC
   PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PETSC
@@ -303,7 +308,7 @@ FULLSRC := $(foreach f,$(subst .o,.F90,$(OBJS)),$(firstword $(wildcard $(VPATH:%
 ################################################################################
 # Library list
 ################################################################################
-LIBS = $(MTSLIBS) $(FABMLIBS) $(CDFLIBS) $(GTMLIBS) $(PETSCLIBS)
+LIBS = $(MTSLIBS) $(FABMLIBS) $(CDFLIBS) $(GTMLIBS) $(PETSCLIBS) $(PDAFLIBS)
 
 ################################################################################
 # Build commands for SCHISM
