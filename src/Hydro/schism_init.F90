@@ -218,7 +218,7 @@
       write(fdb(lfdb-3:lfdb),'(i4.4)') myrank
       !open(12,file='outputs/'//fdb,status='replace') !non-fatal errors
       open(12,file=out_dir(1:len_out_dir)//fdb,status='replace') !non-fatal errors
-
+ 
 !     Temp.
 !      fdb='shapiro_0000'
 !      lfdb=len_trim(fdb)

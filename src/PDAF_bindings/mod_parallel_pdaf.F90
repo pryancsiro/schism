@@ -27,7 +27,14 @@ MODULE mod_parallel_pdaf
 
 ! !PUBLIC DATA MEMBERS:
   ! Additional variables for use with PDAF
-  INTEGER :: n_modeltasks = 1         ! Number of parallel model tasks
+  INTEGER :: COMM_model  ! MPI communicator for model tasks
+  INTEGER :: mype_model  ! Number of PEs in COMM_model
+  INTEGER :: npes_model  ! PE rank in COMM_model
+  INTEGER :: mype_world  ! Number of PEs in MPI_COMM_WORLD
+  INTEGER :: npes_world  ! PE rank in MPI_COMM_WORLD
+  !INTEGER :: MPIerr      ! Error flag for MPI
+
+  INTEGER :: n_modeltasks = 1         ! Number of parallel model tasks (cohorts)
   INTEGER :: n_filterpes  = 1         ! Number of PEs for filter analysis
   INTEGER :: COMM_filter ! MPI communicator for filter PEs 
   INTEGER :: mype_filter, npes_filter ! # PEs and PE rank in COMM_filter

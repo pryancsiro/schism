@@ -118,8 +118,9 @@ include o/$(config)/autosrc.mk
 OBJS =  $(AUTO_OBJ) schism_glbl.o schism_msgp.o misc_modules.o schism_io.o schism_driver.o 
 
 ifdef USE_PDAF
-  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DPDAF
-  OBJS := $(OBJS) mod_parallel_pdaf.o init_parallel_pdaf.o finalize_pdaf.o
+  PPFLAGS := $(PPFLAGS) $(IBMCPP)-DUSE_PDAF
+  OBJS := $(OBJS) parser_mpi.o mod_parallel_pdaf.o mod_assimilation.o \
+          init_parallel_pdaf.o init_pdaf.o init_pdaf_info.o finalize_pdaf.o
 endif
 
 ifdef USE_PETSC

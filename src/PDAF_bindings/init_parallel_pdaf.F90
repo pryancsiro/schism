@@ -62,13 +62,16 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 ! Later revisions - see svn log
 !
 ! !USES:
-  USE schism_msgp, only: parallel_init
+  USE schism_msgp, only: comm,parallel_init,myrank,nproc,parallel_abort
   USE mod_parallel_pdaf, &
-       ONLY: mype_world, npes_world, MPI_COMM_WORLD, mype_model, npes_model, &
+       ONLY: mype_world, npes_world, mype_model, npes_model, &
        COMM_model, mype_filter, npes_filter, COMM_filter, filterpe, &
        n_modeltasks, local_npes_model, task_id, COMM_couple, MPIerr
+  USE parser, &
+       ONLY: parse
 
   IMPLICIT NONE    
+  include 'mpif.h'
   
 ! !ARGUMENTS:
   INTEGER, INTENT(inout) :: dim_ens ! Ensemble size or number of EOFs (only SEEK)
@@ -93,6 +96,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   INTEGER :: pe_index           ! Index of PE
   INTEGER :: my_color, color_couple ! Variables for communicator-splitting 
   LOGICAL :: iniflag            ! Flag whether MPI is initialized
+  CHARACTER(len=32) :: handle   ! handle for command line parser
 
 
   ! *** Initialize MPI if not yet initialized ***
@@ -105,6 +109,10 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
   CALL MPI_Comm_size(MPI_COMM_WORLD, npes_world, MPIerr)
   CALL MPI_Comm_rank(MPI_COMM_WORLD, mype_world, MPIerr)
 
+  ! *** Parse number of model tasks ***
+  ! *** The module variable is N_MODELTASKS. 
+  handle = 'n_tasks'
+  CALL parse(handle, n_modeltasks)
 
   ! *** Initialize communicators for ensemble evaluations ***
   IF (mype_world == 0) &
@@ -168,6 +176,7 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 
   CALL MPI_Comm_split(COMM_ensemble, task_id, mype_ens, &
        COMM_model, MPIerr)
+  if(MPIerr/=MPI_SUCCESS) call parallel_abort('Failed to split')
   
   ! *** Re-initialize PE informations   ***
   ! *** according to model communicator ***
@@ -253,6 +262,12 @@ SUBROUTINE init_parallel_pdaf(dim_ens, screen)
 !  WRITE (*,*) 'TEMPLATE init_parallel_pdaf.F90: Initialize model communicator here!'
 
   !Pass onto SCHISM comm; each 'task' has its own communicator
-  call parallel_init(COMM_model)
+!  call parallel_init(COMM_model)
+
+  !comm is a handle so value may not be meaningful
+  comm=COMM_model
+  nproc=npes_model
+  myrank=mype_model
+!  write(*,*)'comm, myrank=',comm,myrank,nproc,COMM_ensemble,n_modeltasks
 
 END SUBROUTINE init_parallel_pdaf

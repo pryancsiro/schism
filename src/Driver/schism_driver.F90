@@ -99,11 +99,11 @@ subroutine schism_main
   implicit none
   integer :: it,iths,ntime
 
-  call schism_init('./',iths,ntime)
-
 #ifdef USE_PDAF
-  ! Initialize PDAF
-  !call init_pdaf()
+  ! Initialize PDAF (including schism_init for each cohort)
+  call init_pdaf(iths,ntime)
+#else
+  call schism_init('./',iths,ntime)
 #endif
 
   do it=iths+1,ntime
@@ -118,7 +118,7 @@ subroutine schism_main
 
 #ifdef USE_PDAF
   ! End parallelization
-  CALL finalize_pdaf()
+!  CALL finalize_pdaf()
 #endif
 
 end subroutine schism_main

@@ -4,7 +4,7 @@
 ! !ROUTINE: init_pdaf - Interface routine to call initialization of PDAF
 !
 ! !INTERFACE:
-SUBROUTINE init_pdaf()
+SUBROUTINE init_pdaf(iths,ntime)
 
 ! !DESCRIPTION:
 ! This routine collects the initialization of variables for PDAF.
@@ -23,9 +23,10 @@ SUBROUTINE init_pdaf()
 ! !USES:
 !   USE mod_model, &        ! Model variables
 !        ONLY: nx, ny
+  use schism_msgp, only: parallel_abort
   USE mod_parallel_pdaf, &     ! Parallelization variables
        ONLY: mype_world, n_modeltasks, task_id, &
-       COMM_model, COMM_filter, COMM_couple, filterpe, abort_parallel
+       COMM_model, COMM_filter, COMM_couple, filterpe !, abort_parallel
   USE mod_assimilation, & ! Variables for assimilation
        ONLY: dim_state_p, screen, filtertype, subtype, dim_ens, &
        rms_obs, incremental, covartype, type_forget, forget, &
@@ -42,19 +43,22 @@ SUBROUTINE init_pdaf()
 ! Calls: PDAF_get_state
 !EOP
 
+  integer, intent(out) :: iths,ntime
+
 ! Local variables
   INTEGER :: filter_param_i(7) ! Integer parameter array for filter
   REAL    :: filter_param_r(2) ! Real parameter array for filter
   INTEGER :: status_pdaf       ! PDAF status flag
-  INTEGER :: doexit, steps     ! Not used in this implementation
+  INTEGER :: doexit, steps,i,lfdb     ! Not used in this implementation
   REAL    :: timenow           ! Not used in this implementation
+  character(len=72) :: indir
 
   ! External subroutines
-  EXTERNAL :: init_ens         ! Ensemble initialization
-  EXTERNAL :: next_observation_pdaf, & ! Provide time step, model time, 
-                                       ! and dimension of next observation
-       distribute_state_pdaf, &        ! Routine to distribute a state vector to model fields
-       prepoststep_ens_pdaf            ! User supplied pre/poststep routine
+!  EXTERNAL :: init_ens         ! Ensemble initialization
+!  EXTERNAL :: next_observation_pdaf, & ! Provide time step, model time, 
+!                                       ! and dimension of next observation
+!       distribute_state_pdaf, &        ! Routine to distribute a state vector to model fields
+!       prepoststep_ens_pdaf            ! User supplied pre/poststep routine
   
 
 ! ***************************
@@ -91,7 +95,9 @@ SUBROUTINE init_pdaf()
                     !   (8) localized EnKF
                     !   (9) NETF
                     !  (10) LNETF
-  dim_ens = 9       ! Size of ensemble for all ensemble filters
+  !dim_ens = 8       ! Size of ensemble for all ensemble filters
+! At the moment, we only consider # of ensemble=# of tasks (cohorts)
+  dim_ens = n_modeltasks       ! Size of ensemble for all ensemble filters
                     ! Number of EOFs to be used for SEEK
   subtype = 0       ! subtype of filter: 
                     !   ESTKF:
@@ -156,7 +162,7 @@ SUBROUTINE init_pdaf()
 ! *** Parse command line options   ***
 ! *** This is optional, but useful ***
 
-  call init_pdaf_parse()
+!  call init_pdaf_parse()
 
 
 ! *** Initial Screen output ***
@@ -177,56 +183,62 @@ SUBROUTINE init_pdaf()
 ! *** Subsequently, PDAF_init is called.            ***
 ! *****************************************************
 
-  whichinit: IF (filtertype == 2) THEN
-     ! *** EnKF with Monte Carlo init ***
-     filter_param_i(1) = dim_state_p ! State dimension
-     filter_param_i(2) = dim_ens     ! Size of ensemble
-     filter_param_i(3) = rank_analysis_enkf ! Rank of speudo-inverse in analysis
-     filter_param_i(4) = incremental ! Whether to perform incremental analysis
-     filter_param_i(5) = 0           ! Smoother lag (not implemented here)
-     filter_param_r(1) = forget      ! Forgetting factor
-     
-     CALL PDAF_init(filtertype, subtype, 0, &
-          filter_param_i, 6,&
-          filter_param_r, 2, &
-          COMM_model, COMM_filter, COMM_couple, &
-          task_id, n_modeltasks, filterpe, init_ens, &
-          screen, status_pdaf)
-  ELSE
-     ! *** All other filters                       ***
-     ! *** SEIK, LSEIK, ETKF, LETKF, ESTKF, LESTKF ***
-     filter_param_i(1) = dim_state_p ! State dimension
-     filter_param_i(2) = dim_ens     ! Size of ensemble
-     filter_param_i(3) = 0           ! Smoother lag (not implemented here)
-     filter_param_i(4) = incremental ! Whether to perform incremental analysis
-     filter_param_i(5) = type_forget ! Type of forgetting factor
-     filter_param_i(6) = type_trans  ! Type of ensemble transformation
-     filter_param_i(7) = type_sqrt   ! Type of transform square-root (SEIK-sub4/ESTKF)
-     filter_param_r(1) = forget      ! Forgetting factor
-     
-     CALL PDAF_init(filtertype, subtype, 0, &
-          filter_param_i, 7,&
-          filter_param_r, 2, &
-          COMM_model, COMM_filter, COMM_couple, &
-          task_id, n_modeltasks, filterpe, init_ens, &
-          screen, status_pdaf)
-  END IF whichinit
+! whichinit: IF (filtertype == 2) THEN
+!    ! *** EnKF with Monte Carlo init ***
+!    filter_param_i(1) = dim_state_p ! State dimension
+!    filter_param_i(2) = dim_ens     ! Size of ensemble
+!    filter_param_i(3) = rank_analysis_enkf ! Rank of speudo-inverse in analysis
+!    filter_param_i(4) = incremental ! Whether to perform incremental analysis
+!    filter_param_i(5) = 0           ! Smoother lag (not implemented here)
+!    filter_param_r(1) = forget      ! Forgetting factor
+!    
+!    CALL PDAF_init(filtertype, subtype, 0, &
+!         filter_param_i, 6,&
+!         filter_param_r, 2, &
+!         COMM_model, COMM_filter, COMM_couple, &
+!         task_id, n_modeltasks, filterpe, init_ens, &
+!         screen, status_pdaf)
+! ELSE
+!    ! *** All other filters                       ***
+!    ! *** SEIK, LSEIK, ETKF, LETKF, ESTKF, LESTKF ***
+!    filter_param_i(1) = dim_state_p ! State dimension
+!    filter_param_i(2) = dim_ens     ! Size of ensemble
+!    filter_param_i(3) = 0           ! Smoother lag (not implemented here)
+!    filter_param_i(4) = incremental ! Whether to perform incremental analysis
+!    filter_param_i(5) = type_forget ! Type of forgetting factor
+!    filter_param_i(6) = type_trans  ! Type of ensemble transformation
+!    filter_param_i(7) = type_sqrt   ! Type of transform square-root (SEIK-sub4/ESTKF)
+!    filter_param_r(1) = forget      ! Forgetting factor
+!    
+!    CALL PDAF_init(filtertype, subtype, 0, &
+!         filter_param_i, 7,&
+!         filter_param_r, 2, &
+!         COMM_model, COMM_filter, COMM_couple, &
+!         task_id, n_modeltasks, filterpe, init_ens, &
+!         screen, status_pdaf)
+! END IF whichinit
 
 
 ! *** Check whether initialization of PDAF was successful ***
-  IF (status_pdaf /= 0) THEN
-     WRITE (*,'(/1x,a6,i3,a43,i4,a1/)') &
-          'ERROR ', status_pdaf, &
-          ' in initialization of PDAF - stopping! (PE ', mype_world,')'
-     CALL abort_parallel()
-  END IF
+!  IF (status_pdaf /= 0) THEN
+!     WRITE (*,'(/1x,a6,i3,a43,i4,a1/)') &
+!          'ERROR ', status_pdaf, &
+!          ' in initialization of PDAF - stopping! (PE ', mype_world,')'
+!     CALL parallel_abort('init_pdaf')
+!  END IF
 
 
 ! ******************************'***
 ! *** Prepare ensemble forecasts ***
 ! ******************************'***
 
-  CALL PDAF_get_state(steps, timenow, doexit, next_observation_pdaf, &
-       distribute_state_pdaf, prepoststep_ens_pdaf, status_pdaf)
+!  CALL PDAF_get_state(steps, timenow, doexit, next_observation_pdaf, &
+!       distribute_state_pdaf, prepoststep_ens_pdaf, status_pdaf)
+
+  indir='./indir00'
+  lfdb=len_trim(indir)
+  write(indir(lfdb-1:lfdb),'(i2.2)') task_id
+  !print*, 'indir=',trim(adjustl(indir))
+  call schism_init(trim(adjustl(indir)),iths,ntime)
 
 END SUBROUTINE init_pdaf
