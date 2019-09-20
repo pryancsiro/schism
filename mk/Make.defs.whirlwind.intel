@@ -88,11 +88,9 @@ else
 endif
 
 ifdef USE_PDAF
-   PDAFLIBS = -L/sciclone/home10/yinglong/PDAF-D_V1.14/lib -lpdaf-d
-#   PDAFMOD =  -I/sciclone/home10/yinglong/PDAF-D_V1.14/src/
+   PDAFLIBS = -L/sciclone/home10/yinglong/PDAF-D_V1.14/lib -lpdaf-d_WW
 else
    PDAFLIBS=
-#   PDAFMOD = 
 endif
 
 
